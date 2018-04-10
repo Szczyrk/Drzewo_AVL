@@ -1,0 +1,652 @@
+/***************/
+/*Jakub Szczyrk*/
+/******AVL******/
+/*****DRZEWO****/
+/***************/
+
+#include <iostream>
+#include <cstdlib>
+
+using namespace std;
+
+#define PRINT_TREE
+
+/* Definicja klasy reprezentujacej klucz */
+class klucz {
+public:
+  /* Zmienna przechowujaca wskaznik na lewego potomka */
+  klucz *left;
+  /* Zmienna przechowujaca wskaznik na prawego potomka */
+  klucz *right;
+  /* Zmienna przechowujaca rodzica */
+  klucz *parent;
+  /* Zmienna przechowujaca wartosc klucza i zmienna pomcnicza do rownowagi drzewa*/
+  int value, bf;
+};
+
+/* Definicja klasy reprezentujacej binarne drzewo poszukiwan */
+class AVL {
+private:
+
+
+  /* Zmienna przechowujaca rozmiar drzewa */
+  int size;
+public:
+/* Zmienna bedaca wskaznikiem na korzen drzewa */
+  klucz *root;
+  /* Prototyp konstruktora */
+  AVL();
+  /* Prototyp destruktora */
+  ~AVL();
+  /* Rotacje */
+  void RR(klucz * & root, klucz * A);
+  void LL(klucz * & root, klucz * A);
+  void RL(klucz * & root, klucz * A);
+  void LR(klucz * & root, klucz * A);
+
+  void preorder(klucz *x);  //Wypisuje korzen, lewe poddrzewo i prawe poddrzewo
+  void inorder(klucz *x);   //Wypisuje lewe poddrzewo, korzen i prawe poddrzewo
+  void postorder(klucz *x); //Wypisuje lewe poddrzewo, prawe poddrzewo i  korzen
+
+  /* Prototyp funkcji dodajacej klucz do drzewa */
+  int Dodaj(const int a);
+  /* Prototyp funkcji szukajacej klucza w drzewie */
+  klucz *Szukaj(const int tmp);
+  /* Prototyp funkcji usuwajacej dany klucz */
+  klucz *Usun(klucz * usuwany);
+  /* Prototyp funkcji wyszukujacej klucz o wartosci min */
+  klucz *Minimum(klucz *x);
+  klucz *Nastepnik(klucz *x);
+  /* Prototyp funkcji wyswietlajacej drzewo */
+  void WyswietlDrzewo(ostream &s,const klucz *tmp)const;
+  /* Prototyp funkcji usuwajacej dany klucz */
+  void Usunklucz(klucz *tmp);
+  /* Przeciazenie operatora wyjscia */
+  ostream &WyswietlDrzewo(ostream &s)const
+  { if(root) WyswietlDrzewo(s,root); return s; }
+};
+
+/* Przeciazenie operatora wyjscia */
+ostream &operator<<(ostream &s,const AVL &d)
+    {
+        return d.WyswietlDrzewo(s);
+    }
+
+/* Definicja konstruktora drzewa */
+AVL:: AVL()
+{
+  root = NULL;
+  size = 0;
+}
+
+/* Definicja destruktora drzewa */
+AVL:: ~AVL()
+{
+  Usunklucz(root);
+}
+
+/* Definicja funkcji usuwajacej dany klucz */
+void AVL::Usunklucz(klucz *tmp)
+{
+  if(tmp->left)  Usunklucz(tmp->left);
+  if(tmp->right) Usunklucz(tmp->right);
+  delete tmp;
+}
+
+// Rotacja RR
+//-----------
+void AVL::RR(klucz * & root, klucz * miejsce)//miejsce - wezel, w ktorym wystepuje zaburzenie rownowagi w prawym poddrzewie
+{
+  klucz * A = miejsce->right, * ojciecmiejsca = miejsce->parent;//A - prawe dziecko wezla miejsce
+                                             //ojciecmiejsca - rodzic wezla miejsce
+  miejsce->right = A->left;
+  if(miejsce->right)
+  {
+    miejsce->right->parent = miejsce;
+  }
+  A->left = miejsce;
+  A->parent = ojciecmiejsca;
+  miejsce->parent = A;
+  if(ojciecmiejsca)
+    {
+      if(ojciecmiejsca->left == miejsce) ojciecmiejsca->left = A; else ojciecmiejsca->right = A;
+    }
+  else root = A;
+
+  if(A->bf == -1)
+  {
+    miejsce->bf = A->bf = 0;
+  }
+  else
+    {
+      miejsce->bf = -1; A->bf = 1;
+    }
+}
+
+// Rotacja LL
+//-----------
+void AVL::LL(klucz * & root, klucz * miejsce)//miejsce - wezel, w ktorym wystepuje zaburzenie rownowagi w lewym poddrzewie
+{
+  klucz * A = miejsce->left, * ojciecmiejsca = miejsce->parent;//A - lewe dziecko wezla miejsce
+                                        //ojciecmiejsca - rodzic wezla miejsce
+  miejsce->left = A->right;
+  if(miejsce->left)
+  {
+    miejsce->left->parent = miejsce;
+  }
+
+  A->right = miejsce;
+  A->parent = ojciecmiejsca;
+  miejsce->parent = A;
+
+  if(ojciecmiejsca)
+    {
+      if(ojciecmiejsca->left == miejsce) ojciecmiejsca->left = A; else ojciecmiejsca->right = A;
+    }
+  else root = A;
+
+  if(A->bf == 1)
+  {
+    miejsce->bf = 0;
+    A->bf = 0;
+  }
+  else
+    {
+      miejsce->bf = 1;
+      A->bf = -1;
+    }
+}
+
+// Rotacja RL
+//-----------
+void AVL::RL(klucz * & root, klucz * miejsce)//miejsce - wezel, w ktorym wystepuje zaburzenie rownowagi w prawym poddrzewie
+{
+  klucz * A = miejsce->right, * B = A->left, * ojciecmiejsca  = miejsce->parent;//A - prawe dziecko wezla miejsce
+                                                        //B - lewe dziecko węzla A
+                                                        //ojciecmiejsca - rodzic wezla miejsce
+
+  A->left = B->right;
+  if(A->left)
+  {
+    A->left->parent = A;
+  }
+
+  miejsce->right = B->left;
+  if(miejsce->right)
+    {
+    miejsce->right->parent = miejsce;
+    }
+
+  B->left = miejsce;
+  B->right = A;
+  miejsce->parent = A->parent = B;
+  B->parent = ojciecmiejsca;
+
+  if(ojciecmiejsca)
+    {
+      if(ojciecmiejsca->left == miejsce) ojciecmiejsca->left = B; else ojciecmiejsca->right = B;
+    }
+  else
+  {
+    root = B;
+  }
+
+  if(B->bf == -1)
+  {
+    miejsce->bf =  1;
+  }
+  else
+  {
+    miejsce->bf = 0;
+  }
+  if(B->bf ==  1)
+  {
+    A->bf = -1;
+  }
+  else
+  {
+    A->bf = 0;
+  }
+
+  B->bf = 0;
+}
+
+// Rotacja LR
+//-----------
+void AVL::LR(klucz * & root, klucz * miejsce)//miejsce - wezel, w ktorym wystepuje zaburzenie rownowagi w lewyym poddrzewie
+{
+  klucz * A = miejsce->left, * B = A->right, * ojciecmiejsca = miejsce->parent;//A - lewe dziecko wezla miejsce
+                                                        //B - prawe dziecko węzla A
+                                                        //ojciecmiejsca - rodzic wezla miejsce
+
+  A->right = B->left;
+  if(A->right)
+    A->right->parent = A;
+
+  miejsce->left = B->right;
+  if(miejsce->left)
+    miejsce->left->parent = miejsce;
+
+  B->right = miejsce;
+  B->left = A;
+  miejsce->parent = A->parent = B;
+  B->parent = ojciecmiejsca;
+
+  if(ojciecmiejsca)
+    {
+      if(ojciecmiejsca->left == miejsce)
+        ojciecmiejsca->left = B;
+      else
+        ojciecmiejsca->right = B;
+    }
+  else root = B;
+
+  if(B->bf ==  1)
+    miejsce->bf = -1;
+  else
+    miejsce->bf = 0;
+  if(B->bf == -1)
+    A->bf =  1;
+  else
+    A->bf = 0;
+
+  B->bf = 0;
+}
+
+// Przechodzi przez drzewko metoda preorder
+
+void AVL::preorder(klucz *x)
+{
+
+  if(x)
+    {
+      cout << x->value << endl;  // przetwarzanie biezacego wezla
+      preorder(x->left);
+      preorder(x->right);
+    }
+}
+
+// Przechodzi przez drzewko metoda inorder
+
+void AVL::inorder(klucz *x)
+{
+  if(x)
+    {
+      inorder(x->left);
+      cout << x->value << endl;  // przetwarzanie biezacego wezla
+      inorder(x->right);
+    }
+}
+
+// Przechodzi przez drzewko metoda postorder
+
+void AVL::postorder(klucz *x)
+{
+  if(x)
+    {
+      postorder(x->left);
+      postorder(x->right);
+      cout << x->value << endl;  // przetwarzanie biezacego wezla
+    }
+}
+
+
+
+/* Definicja funkcji dodajacej nowy klucz */
+
+int AVL:: Dodaj(const int a)
+{
+  /* Stworzenie nowego wezla i przypisanie argumentu funkcji */
+  /* jako wartosci klucza */
+  klucz *nowy;
+  nowy = new klucz;
+  nowy -> value = a;
+  nowy -> left = NULL;
+  nowy -> right = NULL;
+  nowy -> parent = NULL;
+
+
+  /* Przypadek gdy AVL jest puste */
+  if (size == 0)
+    {
+      root = nowy;
+      size++;
+      return 0;
+    }
+
+  /* W innym wypadku nastepuje przeszukanie drzewa */
+  if (size != 0)
+    {   /* Utworzenie tymczasowego wskaznika na korzen */
+      klucz *miejsce = root;
+      /* Utworzenie tymczasowego wskaznika na rodzica poszukiwanego klucza */
+      klucz *ojciecmiejsca=NULL;
+      //petla wykonuje sie dopoki miejsce nie jest wskaznikiem na zero
+      while(miejsce != NULL)
+	{
+	  /* Stary klucz staje sie rodzicem */
+	  ojciecmiejsca = miejsce;
+	  /* Zmienna pomocnicza */
+	  int _value = (miejsce -> value);
+	  /* Przypadek gdy wartosc jest mniejsza = idziemy na lewo */
+	  if(a <  _value)
+	    {
+	      miejsce = miejsce->left;
+	    }
+	  /* Przypadek gdy wartosc jest wieksza = idziemy na prawo */
+	  if (a > _value)
+	    {
+	      miejsce = miejsce ->right;
+	    }
+	  /* Przypadek, gdy znajdziemy rowna wartosc=konczymy dzialanie */
+	  if(a == _value)
+	    {
+	      delete nowy;
+	      return 1;
+	    }
+	}
+      /* Korzystamy z rodzica miejsca znalezionego w poprzednim while'u */
+      /* Przypadek gdy wartosc jest mniejsza od klucza - idziemy na lewo */
+      if ( a < ojciecmiejsca->value)
+            {
+              /* Dodajemy nowy klucz */
+              ojciecmiejsca->left = nowy;
+              nowy -> parent = ojciecmiejsca;
+              size++;
+            }
+      /* Przypadek gdy wartosc jest mniejsza od klucza - idziemy na prawo */
+      if ( a > ojciecmiejsca->value)
+            {
+              /* Dodajemy nowy klucz */
+              ojciecmiejsca->right = nowy;
+              nowy -> parent = ojciecmiejsca;
+              size++;
+            }
+      if(ojciecmiejsca->left == nowy)
+        {
+          ojciecmiejsca->bf = 1;
+        }
+          else
+        {
+          ojciecmiejsca->bf = -1;
+        }
+
+          miejsce = ojciecmiejsca->parent;        // bedziemy szli w góre drzewa w kierunku korzenia
+          // r i p wskazuja ojca i syna na tej zciezce
+          while(miejsce)
+            {
+              if(miejsce->bf)
+                    {
+                      break;      // przerywamy petle
+                    }
+              // inaczej modyfikujemy r.bf
+              if(miejsce->left == ojciecmiejsca)
+                {
+                  miejsce->bf =  1;
+                    }
+              else
+                    {
+                  miejsce->bf = -1;
+                    }
+              ojciecmiejsca = miejsce;          // przechodzimy w góre na wyzszy poziom
+              miejsce = miejsce->parent;
+            }
+
+            if(!miejsce)return 0;
+
+
+             // równowazyc drzewo
+              if(miejsce->bf == 1)
+                {
+                    if(miejsce->right == ojciecmiejsca)
+                    {
+                        miejsce->bf = 0;  // galezie sie równowaza
+                    }
+                    else if(ojciecmiejsca->bf == -1)
+                    {
+                        LR(root,miejsce);
+                    }
+                    else
+                    {
+                        LL(root,miejsce);
+                    }
+                }
+                else
+                {              // r.bf = -1
+                    if(miejsce->left == ojciecmiejsca)
+                        {
+                            miejsce->bf = 0;  // galezie sie równowaza
+                        }
+                    else if(ojciecmiejsca->bf == 1)
+                        {
+                            RL(root,miejsce);
+                        }
+                    else
+                        {
+                            RR(root,miejsce);
+                        }
+                }
+
+        }
+      return 0;
+}
+
+
+/* Definicja funkcji wyszukujacej dana wartosc w AVL */
+/* Funkcja zwraca wskaznik na klucz przechowujacy dana wartosc */
+
+klucz* AVL:: Szukaj(const int tmp)
+{
+  /* Deklaracja tymczasowego wskaznika */
+  /* Rozpoczyna swoje szukanie w korzeniu */
+  klucz *miejsce = root;
+  while(miejsce!=NULL && tmp!=miejsce->value)
+    {
+          if (tmp < miejsce->value)
+        {
+          miejsce = miejsce->left;
+        }
+          if (tmp > miejsce->value)
+        {
+          miejsce = miejsce->right;
+        }
+    }
+  return miejsce;
+}
+/* Definicja funkcji znajdujacej minimum od danego klucza */
+/* Przechodzi do liscia najbardziej na lewo */
+klucz *AVL:: Minimum(klucz *x)
+{
+  klucz* minimum = x;
+  while(minimum->left)
+    {
+      minimum = minimum->left;
+    }
+  return minimum;
+}
+
+/* Definicja funkcji zwracajacej wskaznik na nastepnik danego wezla    */
+klucz *AVL::Nastepnik(klucz *x)
+{
+  if(x->right)
+    {
+      return Minimum(x->right);
+    }
+  klucz *tmp;
+  do
+    {
+      tmp = x;
+      x = x->parent;
+    } while (x && (x->left != tmp));
+  return x;
+}
+
+/* Definicja funkcji usuwajacej dany klucz */
+
+
+klucz *AVL:: Usun(klucz * usuwany)
+{
+  klucz *rodzic_u;
+  rodzic_u = usuwany->parent;
+
+  klucz *z;
+  if((usuwany->left) && (usuwany->right))
+    {
+      z =  Usun( Nastepnik(usuwany) );
+      z->left = usuwany->left;
+      if(z->left)   z->left->parent = z;
+      z->right = usuwany->right;
+      if(z->right)  z->right->parent = z;
+    }
+  else z = (usuwany->left) ? usuwany->left : usuwany->right;
+  if(z) z->parent = rodzic_u;
+  if(!rodzic_u) root = z;
+  else if(rodzic_u->left == usuwany) rodzic_u->left = z;
+  else rodzic_u->right = z;
+  return usuwany;
+}
+
+/* Definicja funkcji wyswietlajacej drzewo */
+void AVL::WyswietlDrzewo(ostream &s,const klucz *tmp)const
+{
+  if(tmp->left)
+    WyswietlDrzewo(s,tmp->left);
+#ifdef PRINT_TREE
+  int value=tmp->value;
+  const klucz *korzen=root;
+  const klucz *a;
+  for(int pv=0,v=1;korzen;korzen=a,pv=v)
+    {
+      int pvalue=korzen->value;
+      if(value<pvalue)
+        {
+	  v=-1; a=korzen->left;
+        }
+      else if(value>pvalue)
+        {
+	  v=+1;
+	  a=korzen->right;
+        }
+      else
+        {
+	  v=0;  a=0;
+        }
+      if(korzen!=root)
+        s<<(v?(v!=pv?"\xB3  ":"   "):
+	    (pv<0?"\xDA\xC4\xC4":"\xC0\xC4\xC4"));
+    }
+  s<<'\xB2'<<' '<<value<<endl;
+#else
+  s<<tmp->value<<' ';
+#endif
+  if(tmp->right) WyswietlDrzewo(s,tmp->right);
+}
+/* Funkcja wyswietlajaca mozliwe operacje */
+menu()
+{
+    cout << " d - Dodaj liczbe do drzewa" << endl;
+    cout << " u - Usun liczbe o podanej wartosci" << endl;
+    cout << " p - postorder" << endl;
+    cout << " i - inorder" << endl;
+    cout << " r - preorder" << endl;
+    cout << " m - menu" << endl;
+    cout << " w - wyswietl drzewo" << endl;
+    cout << " q - Zakoncz dzialanie programu" << endl;
+}
+/****************************************************************************/
+
+
+int main()
+{
+  AVL tree;
+  klucz *znajdz, *usun;
+
+  int spr,a;
+  char tmp;
+
+
+menu();
+
+  while(true)
+    {
+
+        cout << " m - menu" << endl;
+
+      cout<<endl;
+      cin >> tmp;
+      cout<<endl;
+      switch (tmp)
+        {
+        case 'd':
+            if (system("CLS")) system("clear");
+          while(true)
+            {
+              cout<<"Podaj wartosc liczby "<<endl;
+              cout << " b - Powrot" << endl;
+              cin>>a;
+              if( !cin )
+            { // wpisano coś, co nie jest liczbą
+               if (system("CLS")) system("clear");
+              cin.clear(); // czyścimy flagi błędu strumienia
+              cin.sync(); // czyścimy bufor strumienia
+              break;
+            }
+              else
+            { // wpisano liczbę
+
+              spr = tree.Dodaj(a);
+               if (system("CLS")) system("clear");
+              cout<<endl<<tree<<endl;
+              if (spr==1)
+                {
+                  cout<<"Podana wartosc juz wystepuje w drzewku"<<endl;
+                }
+
+              cout<<endl;
+
+            }
+            }
+          if (system("CLS")) system("clear");
+          break;
+
+        case 'u': cout<<"Podaj wartosc liczby, ktora chcesz usunac"<<endl;
+          cin>>a;
+          znajdz = tree.Szukaj(a);
+          if (znajdz == NULL)
+            {cout<<"Nie znaleziono wartosci"<<endl; break;}
+          usun = tree.Usun(znajdz);
+
+          delete usun;
+          if (system("CLS")) system("clear");
+            cout<<endl<<tree<<endl;
+            cout << "Usunieto podana wartosc : "<<a<<endl;
+          break;
+        case 'p':
+            if (system("CLS")) system("clear");
+          tree.postorder(tree.root);
+          break;
+        case 'i':
+            if (system("CLS")) system("clear");
+          tree.inorder(tree.root);
+          break;
+        case 'r':
+            if (system("CLS")) system("clear");
+          tree.preorder(tree.root);
+          break;
+        case 'm':
+            if (system("CLS")) system("clear");
+            menu();
+            break;
+        case 'w':
+            if (system("CLS")) system("clear");
+            cout<<endl<<tree<<endl;
+            break;
+        case 'q':
+          return 0;
+          default:
+            if (system("CLS")) system("clear");
+              cout<<"Nieznanna komenda."<<endl;
+        }
+    }
+  return 0;
+}
+
